@@ -7,12 +7,15 @@
 - [x] app_main 의존 라이브러리 확인 (`ldd`, 누락 없음)
 - [x] TCP 링크 코덱 + TcpBridge 작성, 자체 점검 통과 (WSL·Isaac 양쪽)
 - [x] Windows→WSL 왕복 측정: 평균 0.383 ms
-- [x] 모드 A Action Graph 스크립트 작성, headless 검증 PASS (최대 오차 2.84°)
+- [x] 모드 A Action Graph 스크립트 작성, headless PASS (최대 오차 0.36°, 직립 1.000)
 - [x] 모드 B 스크립트(RBY1Task + TcpBridge), WSL 릴레이, start_core.sh 작성
 - [x] WSL venv `~/rby1-venv`에 rby1-sdk 0.10.1 오프라인 설치
+- [x] `verify_headless.py builtin` PASS (공식 RBY1Task, 6,192 스텝)
+- [x] `udp_protocol.so` import (venv numpy 2.3.1), `start_core.sh`로 app_main 기동 (gRPC 50051)
+- [x] `verify_headless.py core 120` PASS + SDK 예제 03·25 실행, 목표 자세 일치
+- [x] GUI(isaacsim.exp.full.kit)에서 두 모드 화면 확인 → 모드 A 넘어짐 발견·수정 (자기충돌 OFF, 500 Hz)
 - [x] 가이드 문서 README.md
-- [ ] 승인 후: `verify_headless.py builtin` (공식 RBY1Task 실행)
-- [ ] 승인 후: `start_core.sh` 실행, `udp_protocol.so` import 확인
-- [ ] 승인 후: `verify_headless.py core` + SDK 예제 03/23 실행
-- [ ] GUI(바로가기)에서 두 모드 화면 확인
+- [ ] Isaac 먼저 → core 나중 순서 실측
+- [ ] SDK 예제 23·24 실행
+- [ ] Script Editor·Action Graph 편집기·Property 패널을 손으로 조작해 확인
 - [ ] (사용자 판단) WSL DNS 근본 해결 `.wslconfig dnsTunneling=false`

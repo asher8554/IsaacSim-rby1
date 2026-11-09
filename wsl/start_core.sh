@@ -16,7 +16,7 @@ export RBY1_SKIP_CONTROL_TIMEOUT=1 RBY1_SKIP_RT_LOOP_TIMEOUT=1
 # udp_protocol.so targets Isaac Sim 6.2's numpy 2.x; Ubuntu's system numpy is 1.26, so use the rby1-sdk venv
 PY="${RBY1_PYTHON:-$HOME/rby1-venv/bin/python}"
 [[ -x "$PY" ]] || PY=python3
-"$PY" "$ROOT/wsl/rby1_relay.py" &
+"$PY" -u "$ROOT/wsl/rby1_relay.py" &
 RELAY=$!
 trap 'kill $RELAY 2>/dev/null || true' EXIT
 sleep 0.5

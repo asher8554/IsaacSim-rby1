@@ -11,4 +11,10 @@
 - **모드 A는 USD 드라이브 기본값(K100/D10, °단위) 그대로.** 60 Hz 기본 물리에서 5 s 안에 2.84° 이내로 수렴했다.
 - **WSL venv 별도 생성.** rby1-sdk 0.10.1은 numpy>=2.0.1이 필요하다. Ubuntu 기본 numpy는 1.26.4다. Isaac Sim 6.2 번들 numpy는 2.3.1이므로 udp_protocol.so도 numpy 2 기준일 가능성이 높다(미확인). 릴레이도 venv Python으로 돈다.
 - **WSL DNS 고장은 건드리지 않음.** 10.255.255.254 응답 없음, 1.1.1.1 정상. `.wslconfig`는 사용자 전역 설정이라 가이드에만 적고 wheel 오프라인 설치로 우회했다.
-- **실행 차단.** 자동 권한 분류기가 외부 코드 실행을 막았다. 대상은 udp_protocol.so import와 공식 rby1-sim-isaac RBY1Task 실행이다. 우회하지 않고 사용자 승인을 받기로 했다. 모드 B는 미검증이다.
+- **실행 차단 → 승인 후 검증.** 자동 권한 분류기가 외부 코드 실행을 막았다. 대상은 udp_protocol.so import와 공식 rby1-sim-isaac RBY1Task 실행이다. 우회하지 않고 사용자 승인("승인, 검증 진행")을 받은 뒤 실행했다.
+- **공식 config는 경로로 직접 로드.** Kit은 top-level `config`를 sys.path 순서와 무관하게 번들 cv2/config.py로 해석한다(`NameError: LOADER_DIR`). `importlib.util.spec_from_file_location`으로 공식 src/config.py를 `sys.modules["config"]`에 먼저 등록한다.
+- **udp_protocol.so 확인 결과.** 상태 패킷은 공개 헤더 형식과 같다(N=24일 때 808 B). 명령 파서는 7-튜플을 돌려주고, gains가 없는 패킷이면 kp/kd가 `None`이다. 범용 코덱이 None을 그대로 전달한다.
+- **모드 A 넘어짐 수정.** headless 검증은 팔 각도만 봤다(최대 2.84°). GUI 화면에서 로봇이 뒤로 누운 것을 발견했다. 공식 RBY1Task 설정을 그대로 적용했다. 자기충돌 OFF, 솔버 4/1, 물리 500 Hz, 기본 Grid 바닥이다. 적용 후 0.36°, 직립 1.000이다. verify에 베이스 직립 검사(up.z > 0.9)를 추가했다.
+- **core는 자체 2 ms 클록으로 돈다.** 명령 흐름이 시작되기 전에는 Isaac이 자유 주행했다(headless rtf 1.5). 흐름이 시작되면 lockstep으로 rtf ≈ 1.0이 된다. GUI에서는 0.84~0.91이다.
+- **app_main은 SIGINT 종료 시 segfault(139).** 공식 바이너리의 종료 단계 동작이다. 동작 중 영향은 없었다. 가이드에 명시했다.
+- **GUI 확인 방법.** computer-use가 kit.exe를 앱으로 인식하지 못했다. 그래서 `isaac-sim.bat --exec`로 같은 앱을 띄웠다. 결과는 Kit 로그와 창 영역 캡처(PowerShell CopyFromScreen)로 확인했다. 메뉴·패널을 손으로 조작해 보지는 않았다.

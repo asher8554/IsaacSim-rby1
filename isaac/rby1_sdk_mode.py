@@ -7,6 +7,7 @@ USE_CORE=False: the task's built-in test trajectory, no core needed.
 WARNING: replaces the currently open stage with a new one.
 """
 import asyncio
+import importlib.util
 import os
 import sys
 import types
@@ -17,9 +18,17 @@ try:
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 except NameError:  # Script Editor runs without __file__
     ROOT = r"E:/Github/IsaacSim-rby1"
-for p in (os.path.join(ROOT, "rby1-sim-isaac", "src"), os.path.join(ROOT, "isaac")):
+SRC = os.path.join(ROOT, "rby1-sim-isaac", "src")
+for p in (SRC, os.path.join(ROOT, "isaac")):
     if p not in sys.path:
         sys.path.insert(0, p)
+
+# Kit resolves a top-level "config" to the bundled cv2/config.py whatever sys.path says, so load the official
+# src/config.py by file path and register it under that name before rby1_task imports it.
+_spec = importlib.util.spec_from_file_location("config", os.path.join(SRC, "config.py"))
+config = importlib.util.module_from_spec(_spec)
+sys.modules["config"] = config
+_spec.loader.exec_module(config)
 
 from rby1_link import TcpBridge  # noqa: E402
 
@@ -31,8 +40,9 @@ sys.modules["rby1_udp_bridge"] = _shim
 import omni.usd  # noqa: E402
 from isaacsim.core.api import World  # noqa: E402
 
-from config import PHYSICS_DT, RENDER_DT  # noqa: E402  (rby1-sim-isaac/src/config.py)
 from rby1_task import RBY1Task  # noqa: E402
+
+PHYSICS_DT, RENDER_DT = config.PHYSICS_DT, config.RENDER_DT
 
 
 async def start():

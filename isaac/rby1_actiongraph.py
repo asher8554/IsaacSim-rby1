@@ -12,7 +12,8 @@ import os
 
 import omni.graph.core as og
 import omni.usd
-from pxr import Gf, Sdf, UsdGeom, UsdLux, UsdPhysics
+from isaacsim.core.api.scenes.scene import Scene
+from pxr import PhysxSchema, UsdGeom, UsdPhysics
 
 try:
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,19 +36,18 @@ def build_stage():
     UsdGeom.SetStageMetersPerUnit(stage, 1.0)
     stage.SetDefaultPrim(UsdGeom.Xform.Define(stage, "/World").GetPrim())
 
-    UsdPhysics.Scene.Define(stage, "/World/PhysicsScene")
-    UsdLux.DomeLight.Define(stage, "/World/DomeLight").CreateIntensityAttr(800.0)
-    UsdLux.DistantLight.Define(stage, "/World/SunLight").CreateIntensityAttr(2000.0)
-
-    ground = UsdGeom.Cube.Define(stage, "/World/Ground")
-    ground.CreateSizeAttr(1.0)
-    ground.AddTranslateOp().Set(Gf.Vec3d(0.0, 0.0, -0.05))
-    ground.AddScaleOp().Set(Gf.Vec3f(20.0, 20.0, 0.1))
-    ground.CreateDisplayColorAttr([Gf.Vec3f(0.35, 0.37, 0.4)])
-    UsdPhysics.CollisionAPI.Apply(ground.GetPrim())
+    # Same physics rate as the official simulator (rby1-sim-isaac config.PHYSICS_HZ = 500)
+    scene = UsdPhysics.Scene.Define(stage, "/World/PhysicsScene")
+    PhysxSchema.PhysxSceneAPI.Apply(scene.GetPrim()).CreateTimeStepsPerSecondAttr(500)
+    Scene().add_default_ground_plane()  # Isaac grid environment (ground + lights), as in the official RBY1Task
 
     robot = stage.DefinePrim(ROBOT_PATH, "Xform")
     robot.GetReferences().AddReference(ROBOT_USD)
+    # Official RBY1Task settings: self-collision off (the USD collision shapes make joints unstable), solver 4/1
+    art = PhysxSchema.PhysxArticulationAPI.Apply(robot)
+    art.CreateEnabledSelfCollisionsAttr(False)
+    art.CreateSolverPositionIterationCountAttr(4)
+    art.CreateSolverVelocityIterationCountAttr(1)
     return stage
 
 
