@@ -18,3 +18,7 @@
 - **core는 자체 2 ms 클록으로 돈다.** 명령 흐름이 시작되기 전에는 Isaac이 자유 주행했다(headless rtf 1.5). 흐름이 시작되면 lockstep으로 rtf ≈ 1.0이 된다. GUI에서는 0.84~0.91이다.
 - **app_main은 SIGINT 종료 시 segfault(139).** 공식 바이너리의 종료 단계 동작이다. 동작 중 영향은 없었다. 가이드에 명시했다.
 - **GUI 확인 방법.** computer-use가 kit.exe를 앱으로 인식하지 못했다. 그래서 `isaac-sim.bat --exec`로 같은 앱을 띄웠다. 결과는 Kit 로그와 창 영역 캡처(PowerShell CopyFromScreen)로 확인했다. 메뉴·패널을 손으로 조작해 보지는 않았다.
+- **Leader Arm 텔레옵은 공식 35번 예제를 import해 재사용.** 텔레옵 로직(손잡이 버튼 데드맨, 중력 보상, 관절 한계 클리핑, 0.02 m 충돌 차단, 안전 종료)을 새로 쓰지 않는다. 모듈 전역 `Gripper`와 `LeaderArm`을 바꾸고 `rby.create_robot`을 감싸는 방식이다. 공식 코드가 갱신돼도 그대로 따라간다.
+- **시뮬레이션 core에는 `12v` 전원 장치와 툴 플랜지 전원이 없다.** 전원 장치는 `main` 하나이고 `set_tool_flange_output_voltage`는 False를 돌려준다. 실기에서 12V는 Leader Arm과 그리퍼 전원이므로 이 두 호출만 성공으로 응답한다. `12v`를 `main`에 연결하지 않은 이유가 있다. 종료 시 `power_off("12v")`가 시뮬레이션 로봇 전체 전원을 끄게 되기 때문이다.
+- **모의 Leader Arm은 공식 LeaderArm 인터페이스를 덕 타이핑.** `DynamixelBus.ButtonState`는 읽기 전용이라 SimpleNamespace로 대신했다. 공식 안전 종료는 `ev.stop()`을 부른 뒤 스트림을 취소한다. 그래서 모의 루프도 `ev.stop()`에 맞춰 멈추게 했다(만료된 스트림 오류 수정).
+- **실물 연결 경로는 usbipd → WSL `/dev/rby1_leader_arm` 심볼릭 링크.** 공식 코드가 이 경로를 기본으로 열기 때문에 코드 수정이 필요 없다. Windows COM 포트 직접 사용은 검증 수단이 없어 대안으로만 언급했다.

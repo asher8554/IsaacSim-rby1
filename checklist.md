@@ -15,6 +15,9 @@
 - [x] `verify_headless.py core 120` PASS + SDK 예제 03·25 실행, 목표 자세 일치
 - [x] GUI(isaacsim.exp.full.kit)에서 두 모드 화면 확인 → 모드 A 넘어짐 발견·수정 (자기충돌 OFF, 500 Hz)
 - [x] 가이드 문서 README.md
+- [x] 모드 C Leader Arm 텔레옵: 공식 35번 예제 재사용 래퍼(`wsl/leader_arm_teleop_sim.py`), 그리퍼·12V만 시뮬레이션용으로 대체
+- [x] 모드 C `--mock` position·impedance 검증 (headless), 공식 안전 종료 확인
+- [ ] 모드 C 실물 Leader Arm 연결 (전원, usbipd, /dev/rby1_leader_arm, latency_timer)
 - [ ] Isaac 먼저 → core 나중 순서 실측
 - [ ] SDK 예제 23·24 실행
 - [ ] Script Editor·Action Graph 편집기·Property 패널을 손으로 조작해 확인
