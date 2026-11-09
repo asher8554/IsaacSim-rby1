@@ -2,8 +2,9 @@
 """Notion 5장 코드(right_arm_1 하나만 -45°)의 확장판.
 
 Before running: the robot is loaded at /World/RBY1 (Notion 3장) and WSL runs `python wsl/leader_arm_stream.py`
-(--mock without hardware). Each physics step the 14 arm joint targets move toward the leader arm pose, at most
-MAX_SPEED, so the first pose is reached smoothly instead of in one jump.
+(--mock without hardware). Each physics step (500 Hz) the 14 arm joint targets follow the leader arm pose through
+a first-order low-pass filter (CUTOFF_HZ) and a speed limit (MAX_SPEED), so hand tremor and sensor noise are
+smoothed and the first pose is reached gradually instead of in one jump.
 """
 import asyncio
 import math
@@ -30,6 +31,8 @@ LEADER_SERVER = ("127.0.0.1", 5011)  # wsl/leader_arm_stream.py (WSL forwards Wi
 # Leader arm order = official 35 example: q[0:7] right arm, q[7:14] left arm
 ARM_JOINTS = [f"right_arm_{i}" for i in range(7)] + [f"left_arm_{i}" for i in range(7)]
 MAX_SPEED = math.radians(90.0)  # rad/s per joint
+PHYSICS_HZ = 500.0  # same as the official simulator; the stiff USD drives chatter more at the 60 Hz default
+CUTOFF_HZ = 3.0  # input low-pass, same value as the official teleop's joint_position_command.cutoff_frequency
 
 leader = {"q": None}
 
@@ -60,6 +63,7 @@ if not any(t.name == "leader-arm-rx" for t in threading.enumerate()):  # Script 
 async def drive_arms_from_leader_arm():
     world = World.instance() or World()
     await world.initialize_simulation_context_async()
+    world.set_simulation_dt(physics_dt=1.0 / PHYSICS_HZ, rendering_dt=1.0 / 60.0)  # also applies to an existing World
     world.scene.add_default_ground_plane()  # 바닥: 없으면 로봇이 아래로 떨어진다
     PhysxSchema.PhysxArticulationAPI.Apply(world.stage.GetPrimAtPath("/World/RBY1")) \
         .CreateEnabledSelfCollisionsAttr(False)  # 자기충돌 OFF: 켜져 있으면 뒤로 넘어진다
@@ -69,16 +73,20 @@ async def drive_arms_from_leader_arm():
     robot.initialize()
     idx = np.array([list(robot.dof_names).index(n) for n in ARM_JOINTS])  # 14 arm joints
     target = None
+    filtered = None
 
     def on_physics_step(dt):
-        nonlocal target
+        nonlocal target, filtered
         q = leader["q"]
         if q is None:
             return
         if target is None:
             target = robot.get_joint_positions()[idx].astype(float)
+            filtered = target.copy()
+        alpha = dt / (dt + 1.0 / (2.0 * math.pi * CUTOFF_HZ))  # first-order low-pass gain for this step
+        filtered = filtered + alpha * (q - filtered)
         step = MAX_SPEED * dt
-        target = target + np.clip(q - target, -step, step)  # rate-limited follow
+        target = target + np.clip(filtered - target, -step, step)  # speed-limited follow
         robot.apply_action(ArticulationAction(joint_positions=target, joint_indices=idx))
 
     if world.physics_callback_exists("leader_arm"):

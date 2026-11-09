@@ -289,7 +289,11 @@ flowchart LR
 3. Script Editor에서 `isaac\rby1_leader_arm_direct.py`를 열고 Run한다. Stop을 누르면 멈춘다.
 
 - Leader Arm 쪽 동작은 공식 35번 예제와 같다. 버튼을 누른 쪽 팔만 따라가고, 놓으면 그 자세를 유지한다.
-- 시작할 때 로봇이 Leader Arm 자세로 한 번에 튀지 않도록 목표 이동 속도를 관절당 90°/s로 제한한다.
+- 시작할 때 로봇이 Leader Arm 자세로 한 번에 튀지 않도록 목표 이동 속도를 관절당 90°/s로 제한한다(`MAX_SPEED`).
+- 떨림 대책 두 가지가 기본으로 들어 있다.
+  - 물리를 500 Hz로 돌린다(`PHYSICS_HZ`). 이미 만들어진 World에도 적용된다.
+  - 입력에 1차 저역통과 필터를 건다. 차단 주파수는 공식 텔레옵의 명령 필터와 같은 3 Hz다(`CUTOFF_HZ`).
+- 맞교환이 있다. `CUTOFF_HZ`를 낮추면 더 부드러워지지만 늦게 따라온다. 높이면 그 반대다.
 
 ## 8. 점검 도구
 
@@ -324,6 +328,7 @@ C:\isaacsim-6.2\python.bat E:\Github\IsaacSim-rby1\tools\verify_headless.py core
 | 모드 C `--mock` impedance | 같은 입력에 약 −101°~−143°로 따라감. 안전 종료 완료 (headless) |
 | 모드 C 실물 Leader Arm | **미검증** (하드웨어 없음) |
 | 직접 구동 `rby1_leader_arm_direct.py` + `leader_arm_stream.py --mock` | 양팔 14관절이 Leader Arm 값을 따라감. 팔꿈치 리더 −143.3/−95.5/−144.4° → 시뮬 −143.8/−95.2/−144.6°, `arm_1`·`arm_5` 일치, 직립 1.000 (headless, Script Editor처럼 `__file__` 없이 실행) |
+| 직접 구동 떨림 대책 (500 Hz + 3 Hz 입력 필터) | 표준편차 1° 잡음을 섞은 입력으로 수정 전후 비교. 떨림(관절각 2차 차분 RMS) 0.152° → **0.030°**, 추종 오차 RMSE 3.18° → 4.34°(필터 지연), 직립 1.000 (headless) |
 
 ## 10. 트러블슈팅
 
