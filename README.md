@@ -55,11 +55,13 @@ E:\Github\IsaacSim-rby1\
 ├─ isaac\                    Isaac Sim(Windows)에서 실행
 │  ├─ rby1_actiongraph.py    모드 A: 로봇 로드 + Action Graph 생성
 │  ├─ rby1_sdk_mode.py       모드 B: 공식 RBY1Task + TcpBridge
+│  ├─ rby1_leader_arm_direct.py  Leader Arm 값으로 양팔 14관절 직접 위치 제어 (core 없이)
 │  └─ rby1_link.py           TCP 프레임 코덱 + TcpBridge (WSL 릴레이와 공용)
 ├─ wsl\                      WSL에서 실행
 │  ├─ start_core.sh          릴레이 + app_main isaac 동시 실행
 │  ├─ rby1_relay.py          TCP ↔ UDP 중계
-│  └─ leader_arm_teleop_sim.py  모드 C: 공식 35번 텔레옵 예제를 시뮬레이션용으로 실행 (--mock 지원)
+│  ├─ leader_arm_teleop_sim.py  모드 C: 공식 35번 텔레옵 예제를 시뮬레이션용으로 실행 (--mock 지원)
+│  └─ leader_arm_stream.py   Leader Arm 관절값 14개를 TCP 5011로 보내는 서버 (--mock 지원)
 ├─ tools\
 │  ├─ fetch_rby1_core.py     공식 Docker 이미지에서 rby1 core만 추출 (Docker 불필요)
 │  ├─ check_link.py          Windows↔WSL 왕복 지연 점검
@@ -271,6 +273,24 @@ python wsl/leader_arm_teleop_sim.py --mock --mode impedance --seconds 30  # impe
 
 usbipd 없이 Windows에서 COM 포트로 직접 읽는 방법은 검증하지 않았다. rby1-sdk에 Windows용 wheel은 있다.
 
+### 직접 구동 — core 없이 `apply_action`으로 양팔 14관절 제어
+
+rby1 core를 거치지 않는 방식이다. Notion 5장 코드(`right_arm_1` 하나만 −45°)를 확장해, Leader Arm 값으로 양팔 전체를 Isaac Sim의 위치 드라이브로 움직인다. 모터 서보 모델과 충돌 차단은 없고, 대신 구성이 단순하다.
+
+```mermaid
+flowchart LR
+  LA["Leader Arm (USB)"] -->|"/dev/rby1_leader_arm"| SV["WSL: leader_arm_stream.py<br/>관절값 14개, 100 Hz"]
+  SV -->|"TCP 127.0.0.1:5011"| SE["Script Editor: rby1_leader_arm_direct.py"]
+  SE -->|"apply_action 14관절"| R["/World/RBY1"]
+```
+
+1. 로봇을 `/World/RBY1`에 불러온다(Notion 3장 코드).
+2. WSL에서 `python wsl/leader_arm_stream.py --mock`을 실행한다. 실물이면 `--mock`을 빼고, 위 실물 연결 2~3단계를 먼저 한다.
+3. Script Editor에서 `isaac\rby1_leader_arm_direct.py`를 열고 Run한다. Stop을 누르면 멈춘다.
+
+- Leader Arm 쪽 동작은 공식 35번 예제와 같다. 버튼을 누른 쪽 팔만 따라가고, 놓으면 그 자세를 유지한다.
+- 시작할 때 로봇이 Leader Arm 자세로 한 번에 튀지 않도록 목표 이동 속도를 관절당 90°/s로 제한한다.
+
 ## 8. 점검 도구
 
 ```powershell
@@ -303,6 +323,7 @@ C:\isaacsim-6.2\python.bat E:\Github\IsaacSim-rby1\tools\verify_headless.py core
 | 모드 C `--mock` position | 5단계 모두 통과. 양 팔꿈치 명령(준비 자세 −120° ±25°)을 시뮬레이션이 약 −95°~−145°로 따라감. 공식 안전 종료까지 완료 (headless) |
 | 모드 C `--mock` impedance | 같은 입력에 약 −101°~−143°로 따라감. 안전 종료 완료 (headless) |
 | 모드 C 실물 Leader Arm | **미검증** (하드웨어 없음) |
+| 직접 구동 `rby1_leader_arm_direct.py` + `leader_arm_stream.py --mock` | 양팔 14관절이 Leader Arm 값을 따라감. 팔꿈치 리더 −143.3/−95.5/−144.4° → 시뮬 −143.8/−95.2/−144.6°, `arm_1`·`arm_5` 일치, 직립 1.000 (headless, Script Editor처럼 `__file__` 없이 실행) |
 
 ## 10. 트러블슈팅
 
